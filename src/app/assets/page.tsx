@@ -6,7 +6,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Search, Plus, Upload, FolderOpen } from "lucide-react";
+import { Search, Plus, Upload, FolderOpen, Sparkles } from "lucide-react";
 import { mockAssets } from "@/lib/mock-data";
 import { formatDate, getAssetTypeLabel, typeColors, type AssetType } from "@/types";
 
@@ -56,6 +56,13 @@ export default function AssetsPage() {
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">资产库</h1>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => router.push("/search")}
+              className="inline-flex items-center gap-2 rounded-lg border border-indigo-300 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-50 transition-colors"
+            >
+              <Sparkles className="h-4 w-4" />
+              智能匹配
+            </button>
             <button className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
               <Upload className="h-4 w-4" />
               导入

@@ -9,6 +9,7 @@ import type {
   EvaluationRun,
   Activity,
   ModelConfig,
+  AssetSearchDocument,
 } from "@/types";
 
 // ============================================================
@@ -1234,3 +1235,37 @@ export const mockRecentItems = {
   recentAssets: mockAssets.slice(0, 4),
   recentEvalRuns: mockEvalRuns.slice(0, 3),
 };
+
+// ============================================================
+// Search — Asset Discovery
+// ============================================================
+
+function generateSearchableText(asset: (typeof mockAssets)[number]): string {
+  const parts = [asset.name, asset.description];
+  if (asset.content.systemPrompt) parts.push(asset.content.systemPrompt);
+  if (asset.content.userPromptTemplate) parts.push(asset.content.userPromptTemplate);
+  if (asset.content.roleDefinition) parts.push(asset.content.roleDefinition);
+  if (asset.tags.length > 0) parts.push(asset.tags.join(" "));
+  return parts.join(" ");
+}
+
+function getTypeLabel(type: string): string {
+  const map: Record<string, string> = {
+    prompt: "Prompt提示词",
+    agent: "Agent智能体",
+    workflow: "Workflow工作流",
+    knowledge_pack: "知识库",
+  };
+  return map[type] || type;
+}
+
+export const mockSearchDocuments: AssetSearchDocument[] = mockAssets.map((asset) => ({
+  id: `sd_${asset.id}`,
+  assetId: asset.id,
+  workspaceId: asset.workspaceId,
+  title: asset.name,
+  description: asset.description,
+  tags: asset.tags,
+  searchableText: generateSearchableText(asset),
+  aiSummary: `${asset.name}是一个${getTypeLabel(asset.type)}类型的AI资产，主要用于${asset.description.slice(0, 50)}`,
+}));

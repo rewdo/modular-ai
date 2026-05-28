@@ -233,3 +233,53 @@ export const typeOptions: { label: AssetTypeLabel; value: AssetType | "all" }[] 
   { label: "Workflow", value: "workflow" },
   { label: "Knowledge Pack", value: "knowledge_pack" },
 ];
+
+// ============================================================
+// Search & Asset Discovery Types
+// ============================================================
+
+/** 来源类型（search filters 共用字段名与 Asset 保持一致） */
+export type SourceType = Asset["sourceType"];
+
+/** 可见性（search filters 共用字段名与 Asset 保持一致） */
+export type Visibility = Asset["visibility"];
+
+export interface SearchResult {
+  asset: Asset;
+  relevanceScore: number;
+  matchReason: string;
+  matchHighlights: string[];
+}
+
+export interface SearchRequest {
+  query: string;
+  workspaceId: string;
+  mode?: "keyword" | "smart_match";
+  filters?: {
+    assetType?: AssetType;
+    visibility?: Visibility;
+    sourceType?: SourceType;
+    minScore?: number;
+  };
+}
+
+export interface SearchResponse {
+  results: SearchResult[];
+  suggestedNext: {
+    action: "fork" | "view" | "compare" | "create";
+    label: string;
+  };
+  totalCount: number;
+  queryTime: number;
+}
+
+export interface AssetSearchDocument {
+  id: string;
+  assetId: string;
+  workspaceId: string;
+  title: string;
+  description?: string;
+  tags: string[];
+  searchableText: string;
+  aiSummary?: string;
+}

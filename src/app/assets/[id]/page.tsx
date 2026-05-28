@@ -176,6 +176,7 @@ function MetaRow({ label, value }: { label: string; value: string }) {
 }
 
 function OverviewTab({ asset }: { asset: ReturnType<() => import("@/lib/mock-data")["mockAssets"][number]> }) {
+  const router = useRouter();
   const userMap: Record<string, string> = {
     "u-001": "张明",
     "u-002": "李雪",
@@ -251,6 +252,72 @@ function OverviewTab({ asset }: { asset: ReturnType<() => import("@/lib/mock-dat
           </Card>
         )}
       </div>
+
+      {/* Similar Assets */}
+      <SimilarAssets currentAsset={asset} />
+    </div>
+  );
+}
+
+/** Recommend assets that share tags with the current asset */
+function SimilarAssets({
+  currentAsset,
+}: {
+  currentAsset: ReturnType<() => import("@/lib/mock-data")["mockAssets"][number]>;
+}) {
+  const router = useRouter();
+  const similar = mockAssets
+    .filter(
+      (a) =>
+        a.id !== currentAsset.id &&
+        a.tags.some((t) => currentAsset.tags.includes(t))
+    )
+    .slice(0, 3);
+
+  if (similar.length === 0) return null;
+
+  return (
+    <div className="lg:col-span-3 mt-4">
+      <Card className="p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">
+          相似资产推荐
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {similar.map((a) => (
+            <div
+              key={a.id}
+              onClick={() => router.push(`/assets/${a.id}`)}
+              className="cursor-pointer rounded-lg border border-gray-200 p-4 hover:border-primary-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-sm font-medium text-gray-900 truncate">
+                  {a.name}
+                </span>
+                <Badge variant={typeColors[a.type]}>
+                  {getAssetTypeLabel(a.type)}
+                </Badge>
+              </div>
+              <p className="text-xs text-gray-500 line-clamp-2">
+                {a.description}
+              </p>
+              {a.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {a.tags.slice(0, 2).map((tag) => (
+                    <Badge key={tag} variant="default">
+                      {tag}
+                    </Badge>
+                  ))}
+                  {a.tags.length > 2 && (
+                    <span className="text-xs text-gray-400">
+                      +{a.tags.length - 2}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

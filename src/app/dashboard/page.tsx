@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -12,6 +13,8 @@ import {
   DollarSign,
   Clock,
   TrendingUp,
+  Search,
+  Sparkles,
 } from "lucide-react";
 import {
   mockDashboardStats,
@@ -21,6 +24,7 @@ import {
 import { getAssetTypeLabel, timeAgo, typeColors } from "@/types";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +89,42 @@ export default function DashboardPage() {
     <AppLayout>
       <div className="mx-auto max-w-6xl space-y-6">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+
+        {/* Describe & Match */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+          <div className="flex items-center gap-3">
+            <Search className="w-5 h-5 text-blue-500 flex-shrink-0" />
+            <input
+              placeholder="描述你的AI需求，找现成资产…"
+              className="flex-1 bg-transparent border-none outline-none text-sm placeholder:text-gray-400"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  router.push(
+                    `/search?q=${encodeURIComponent(e.currentTarget.value)}`
+                  );
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                const input = document.querySelector(
+                  ".bg-gradient-to-r input"
+                ) as HTMLInputElement;
+                if (input?.value) {
+                  router.push(
+                    `/search?q=${encodeURIComponent(input.value)}`
+                  );
+                }
+              }}
+              className="bg-blue-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex-shrink-0"
+            >
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                智能匹配
+              </span>
+            </button>
+          </div>
+        </div>
 
         {/* Stat Cards */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
