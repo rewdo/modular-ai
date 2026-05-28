@@ -1,0 +1,260 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String?
+  email        String    @unique
+  passwordHash String
+  avatarUrl    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  ownedWorkspaces Workspace[]
+  memberships     WorkspaceMember[]
+  createdAssets   Asset[]            @relation("AssetCreatedBy")
+  updatedAssets   Asset[]            @relation("AssetUpdatedBy")
+  versions        AssetVersion[]
+  mergeCreated    MergeRequest[]     @relation("MergeRequestCreatedBy")
+  mergeReviewed   MergeRequest[]     @relation("MergeRequestReviewedBy")
+  evaluations     Evaluation[]
+  evaluationRuns  EvaluationRun[]
+  comments        Comment[]
+  activities      Activity[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  type      String   @default("personal") // personal | team
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner      User              @relation(fields: [ownerId], references: [id])
+  members    WorkspaceMember[]
+  assets     Asset[]
+  evaluations Evaluation[]
+  comments   Comment[]
+  activities Activity[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   @default("viewer") // owner | editor | viewer
+  invitedBy   String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("workspace_members")
+}
+
+model Asset {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  type              String    // prompt | agent | workflow | knowledge_pack
+  name              String
+  slug              String
+  description       String?
+  visibility        String    @default("private") // private | workspace | public
+  sourceType        String    @default("manual") // manual | dify | coze | n8n | import_file | fork
+  sourceMetadata    Json?
+  currentVersionId  String?
+  forkedFromAssetId String?
+  createdBy         String
+  updatedBy         String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  archivedAt        DateTime?
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id])
+  creator        User            @relation("AssetCreatedBy", fields: [createdBy], references: [id])
+  updater        User?           @relation("AssetUpdatedBy", fields: [updatedBy], references: [id])
+  forkedFrom     Asset?          @relation("ForkedAssets", fields: [forkedFromAssetId], references: [id])
+  forkedAssets   Asset[]         @relation("ForkedAssets")
+  tags           AssetTag[]
+  versions       AssetVersion[]
+  mergeRequests  MergeRequest[]
+  evaluations    Evaluation[]
+  comments       Comment[]
+
+  @@unique([workspaceId, slug])
+  @@map("assets")
+}
+
+model AssetTag {
+  id      String @id @default(cuid())
+  assetId String
+  tag     String
+
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([assetId, tag])
+  @@map("asset_tags")
+}
+
+model AssetVersion {
+  id              String   @id @default(cuid())
+  assetId         String
+  versionNumber   Int
+  branchName      String   @default("main")
+  parentVersionId String?
+  contentJson     Json
+  changeSummary   String?
+  aiChangeSummary String?
+  isStable        Boolean  @default(false)
+  createdBy       String
+  createdAt       DateTime @default(now())
+
+  asset         Asset          @relation(fields: [assetId], references: [id])
+  creator       User           @relation(fields: [createdBy], references: [id])
+  parentVersion AssetVersion?  @relation("VersionChain", fields: [parentVersionId], references: [id])
+  childVersions AssetVersion[] @relation("VersionChain")
+  evalRuns      EvaluationRun[]
+
+  @@unique([assetId, branchName, versionNumber])
+  @@map("asset_versions")
+}
+
+model MergeRequest {
+  id              String    @id @default(cuid())
+  assetId         String
+  title           String
+  description     String?
+  sourceBranch    String
+  targetBranch    String
+  sourceVersionId String
+  targetVersionId String
+  status          String    @default("open") // open | approved | merged | closed | changes_requested
+  createdBy       String
+  reviewedBy      String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  mergedAt        DateTime?
+
+  asset         Asset         @relation(fields: [assetId], references: [id])
+  creator       User          @relation("MergeRequestCreatedBy", fields: [createdBy], references: [id])
+  reviewer      User?         @relation("MergeRequestReviewedBy", fields: [reviewedBy], references: [id])
+  sourceVersion AssetVersion  @relation("MergeRequestSource", fields: [sourceVersionId], references: [id])
+  targetVersion AssetVersion  @relation("MergeRequestTarget", fields: [targetVersionId], references: [id])
+
+  @@map("merge_requests")
+}
+
+model Evaluation {
+  id          String   @id @default(cuid())
+  workspaceId String
+  assetId     String?
+  name        String
+  description String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace        @relation(fields: [workspaceId], references: [id])
+  asset     Asset?           @relation(fields: [assetId], references: [id])
+  creator   User             @relation(fields: [createdBy], references: [id])
+  cases     EvaluationCase[]
+  runs      EvaluationRun[]
+
+  @@map("evaluations")
+}
+
+model EvaluationCase {
+  id              String   @id @default(cuid())
+  evaluationId    String
+  inputJson       Json
+  expectedOutputJson Json?
+  notes           String?
+  createdAt       DateTime @default(now())
+
+  evaluation Evaluation        @relation(fields: [evaluationId], references: [id], onDelete: Cascade)
+  results    EvaluationResult[]
+
+  @@map("evaluation_cases")
+}
+
+model EvaluationRun {
+  id             String   @id @default(cuid())
+  evaluationId   String
+  assetVersionId String
+  status         String   @default("pending") // pending | running | completed | failed
+  avgScore       Float?
+  avgCost        Float?
+  avgLatency     Float?
+  summary        String?
+  createdBy      String
+  createdAt      DateTime @default(now())
+
+  evaluation Evaluation      @relation(fields: [evaluationId], references: [id])
+  version    AssetVersion    @relation(fields: [assetVersionId], references: [id])
+  creator    User            @relation(fields: [createdBy], references: [id])
+  results    EvaluationResult[]
+
+  @@map("evaluation_runs")
+}
+
+model EvaluationResult {
+  id               String   @id @default(cuid())
+  evaluationRunId  String
+  caseId           String
+  actualOutputJson Json
+  score            Float
+  cost             Float?
+  latency          Float?
+  judgeNotes       String?
+  createdAt        DateTime @default(now())
+
+  run         EvaluationRun  @relation(fields: [evaluationRunId], references: [id], onDelete: Cascade)
+  evalCase    EvaluationCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("evaluation_results")
+}
+
+model Comment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  entityType  String   // asset | merge_request | evaluation
+  entityId    String
+  authorId    String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  author    User      @relation(fields: [authorId], references: [id])
+
+  @@map("comments")
+}
+
+model Activity {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  actorId      String
+  entityType   String
+  entityId     String
+  actionType   String   // create | update | delete | fork | merge | evaluate
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  actor     User      @relation(fields: [actorId], references: [id])
+
+  @@map("activities")
+}
